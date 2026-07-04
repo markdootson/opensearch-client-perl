@@ -1,7 +1,10 @@
 Revision history for OpenSearch::Client
 
+3.007004    2026-07-04
+            Fixed versions
+
 3.007003    2026-07-04
-            Kwalitee
+            Bad versions
 
 3.007002    2026-07-04
             Pod updates
