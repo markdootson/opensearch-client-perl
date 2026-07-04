@@ -21,7 +21,7 @@
 # limitations under the License.
 
 package OpenSearch::Client::Core::3_0::Direct::Indices;
-$OpenSearch::Client::Core::3_0::Direct::Indices::VERSION = '3.007001';
+$OpenSearch::Client::Core::3_0::Direct::Indices::VERSION = '3.007002';
 use Moo;
 with 'OpenSearch::Client::Core::3_0::Role::API';
 with 'OpenSearch::Client::Role::Client::Direct';
@@ -43,7 +43,7 @@ B<OpenSearch::Client::Core::3_0::Direct::Indices>
 
 =head1 VERSION
 
-version 3.007001
+version 3.007002
 
 =head1 SYNOPSIS
 

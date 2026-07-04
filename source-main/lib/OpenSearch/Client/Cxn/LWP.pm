@@ -21,7 +21,7 @@
 # limitations under the License.
 
 package OpenSearch::Client::Cxn::LWP;
-$OpenSearch::Client::Cxn::LWP::VERSION = '3.007000';
+$OpenSearch::Client::Cxn::LWP::VERSION = '3.007002';
 use Moo;
 with 'OpenSearch::Client::Role::Cxn', 'OpenSearch::Client::Role::Is_Sync';
 
@@ -117,7 +117,7 @@ OpenSearch::Client::Cxn::LWP - A Cxn implementation which uses LWP
 
 =head1 VERSION
 
-version 3.007000
+version 3.007002
 
 =head1 DESCRIPTION
 

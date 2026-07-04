@@ -21,7 +21,7 @@
 # limitations under the License.
 
 package OpenSearch::Client::Core::3_0::Role::API;
-$OpenSearch::Client::Core::3_0::Role::API::VERSION = '3.007001';
+$OpenSearch::Client::Core::3_0::Role::API::VERSION = '3.007002';
 
 use Moo::Role;
 with 'OpenSearch::Client::Role::API';
@@ -9376,7 +9376,7 @@ OpenSearch::Client::Core::3_0::Role::API
 
 =head1 VERSION
 
-version 3.007001
+version 3.007002
 
 =head1 DESCRIPTION
 
