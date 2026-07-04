@@ -21,7 +21,7 @@
 # limitations under the License.
 
 package OpenSearch::Client::Role::Logger;
-$OpenSearch::Client::Role::Logger::VERSION = '3.007000';
+$OpenSearch::Client::Role::Logger::VERSION = '3.007002';
 use Moo::Role;
 
 use URI();

@@ -21,7 +21,7 @@
 # limitations under the License.
 
 package OpenSearch::Client::Role::Transport;
-$OpenSearch::Client::Role::Transport::VERSION = '3.007000';
+$OpenSearch::Client::Role::Transport::VERSION = '3.007002';
 use Moo::Role;
 
 requires qw(perform_request);
@@ -96,7 +96,7 @@ OpenSearch::Client::Role::Transport - Transport role providing interface between
 
 =head1 VERSION
 
-version 3.007000
+version 3.007002
 
 =head1 MANUAL
 

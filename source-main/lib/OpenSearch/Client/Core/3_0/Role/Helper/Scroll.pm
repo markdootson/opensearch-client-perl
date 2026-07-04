@@ -21,7 +21,7 @@
 # limitations under the License.
 
 package OpenSearch::Client::Core::3_0::Role::Helper::Scroll;
-$OpenSearch::Client::Core::3_0::Role::Helper::Scroll::VERSION = '3.007001';
+$OpenSearch::Client::Core::3_0::Role::Helper::Scroll::VERSION = '3.007002';
 use Moo::Role;
 requires 'finish';
 use OpenSearch::Client::Util qw(parse_params throw);
@@ -80,7 +80,7 @@ OpenSearch::Client::Core::3_0::Role::Helper::Scroll - Provides common functional
 
 =head1 VERSION
 
-version 3.007001
+version 3.007002
 
 =head1 MANUAL
 

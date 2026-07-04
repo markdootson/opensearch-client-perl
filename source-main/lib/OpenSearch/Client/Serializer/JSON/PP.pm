@@ -21,7 +21,7 @@
 # limitations under the License
 
 package OpenSearch::Client::Serializer::JSON::PP;
-$OpenSearch::Client::Serializer::JSON::PP::VERSION = '3.007000';
+$OpenSearch::Client::Serializer::JSON::PP::VERSION = '3.007002';
 use Moo;
 use JSON::PP;
 
