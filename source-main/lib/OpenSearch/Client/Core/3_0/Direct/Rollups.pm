@@ -21,7 +21,7 @@
 # limitations under the License.
 
 package OpenSearch::Client::Core::3_0::Direct::Rollups;
-$OpenSearch::Client::Core::3_0::Direct::Rollups::VERSION = '3.007000';
+$OpenSearch::Client::Core::3_0::Direct::Rollups::VERSION = '3.007001';
 use Moo;
 with 'OpenSearch::Client::Core::3_0::Role::API';
 with 'OpenSearch::Client::Role::Client::Direct';
@@ -43,7 +43,7 @@ B<OpenSearch::Client::Core::3_0::Direct::Rollups>
 
 =head1 VERSION
 
-version 3.007000
+version 3.007001
 
 =head1 SYNOPSIS
 
