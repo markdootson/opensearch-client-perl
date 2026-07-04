@@ -21,7 +21,7 @@
 # limitations under the License.
 
 package OpenSearch::Client::Role::Serializer::JSON;
-$OpenSearch::Client::Role::Serializer::JSON::VERSION = '3.070';
+$OpenSearch::Client::Role::Serializer::JSON::VERSION = '3.007003';
 use Moo::Role;
 requires 'JSON';
 
@@ -127,7 +127,7 @@ OpenSearch::Client::Role::Serializer::JSON - A Serializer role for JSON modules
 
 =head1 VERSION
 
-version 3.007002
+version 3.007003
 
 =head1 DESCRIPTION
 
