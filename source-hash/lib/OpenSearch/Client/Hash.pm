@@ -1,5 +1,5 @@
 package OpenSearch::Client::Hash;
-$OpenSearch::Client::Hash::VERSION = '3.007010';
+$OpenSearch::Client::Hash::VERSION = '3.008';
 use Moo;
 use MIME::Base64 ();
 use Crypt::URandom;
@@ -8,46 +8,69 @@ use Crypt::Argon2 0.013;
 use Crypt::PBKDF2 0.161520;
 use namespace::clean;
 
+has 'errorstring' => ( is => 'rwp', default => '' );
+
+sub _is_integer {
+    my($self, $value) = @_;
+    return 0 unless defined($value);
+    return ( $value =~ /^[1-9][0-9]*$/ ) ? 1 : 0;
+}
+
+sub _is_integer_between {
+    my($self, $value, $low, $high) = @_;
+    return 0 unless $self->_is_integer($value);
+    return ( $value >= $low && $value <= $high ) ? 1 : 0;
+}
+
 sub create_bcrypt_password_hash {
     my($self, %options) = @_;
+    $self->_set_errorstring('');
     $options{type} ||= '2y';
     $options{rounds} ||= 12;
     $options{password} ||= '';
     
     my $salt = Crypt::URandom::urandom(16);
     
+    ## validate password
     unless($options{password}) {
-        die 'you must provide a password';
+        return $self->_return_on_error('you must provide a password');
     }
     {
         my $pwdlen = length($options{password});
         if ($pwdlen > 72 ) {
-            die 'your password is longer than 72 characters';
+            return $self->_return_on_error('your password is longer than 72 characters');
         }   
     }
     
+    ## validate type
     $options{type} = lc($options{type});
     unless($options{type} =~ /^2(a|b|y)$/ ) {
-        die qq(invalid type '$options{type}' : valid options are 2y, 2a or 2b);
+        return $self->_return_on_error(qq(invalid type '$options{type}' : valid options are 2y, 2a or 2b));
     }
     
-    unless($options{rounds}
-       && $options{rounds} =~ /^[1-9][0-9]*$/
-       && $options{rounds} >= 4
-       && $options{rounds} <= 31
-       ) {
-        die qq(Invalid rounds "$options{rounds}". Must be an integer between 4 and 31 inclusive.);
+    ## validate rounds
+    unless( $self->_is_integer_between($options{rounds}, 4, 31) ) {
+        return $self->_return_on_error(qq(Invalid rounds "$options{rounds}". Must be an integer between 4 and 31 inclusive.));
     }
-        
+    
+    ## create hash
     my $hash = Crypt::Bcrypt::bcrypt($options{password}, $options{type}, $options{rounds}, $salt);
+    
+    ## validate hash
     unless(Crypt::Bcrypt::bcrypt_check($options{password}, $hash)) {
-        die 'failed to verify created hash';
+        return $self->_return_on_error('failed to verify created hash');
     }
-    return $hash;
+    
+    if ( $hash ) {
+        return $hash;
+    } else {
+        return $self->_return_on_error('unexpected error creating hash');
+    }
 }
 
 sub create_argon2_password_hash {
     my($self, %options) = @_;
+    $self->_set_errorstring('');
     $options{password} ||= '';
     $options{type}   ||= 'argon2id';
     $options{length} ||= 32;
@@ -56,32 +79,34 @@ sub create_argon2_password_hash {
     
     my $salt = Crypt::URandom::urandom(32);
     
+    ## validate password
     unless($options{password}) {
-        die 'you must provide a password';
+        return $self->_return_on_error('you must provide a password');
     }
     
+    ## validate type
     $options{type} = lc($options{type});
-        
     unless($options{type} =~ /\Aargon2i\Z|\Aargon2d\Z|\Aargon2id\Z/ ) {
-        die qq(invalid type '$options{type}' : valid options are argon2i, argon2d or argon2id);
+        my $err_string = qq(invalid type '$options{type}' : valid options are argon2i, argon2d or argon2id);
+        return $self->_return_on_error($err_string);
     }
     
-    unless($options{iterations}
-       && $options{iterations} =~ /^[1-9][0-9]*$/
-       ) {
-        die qq(Invalid iterations "$options{iterations}". Must be an integer);
+    ## validate iterations
+    unless($self->_is_integer($options{iterations})) {
+        my $err_string = qq(Invalid iterations "$options{iterations}". Must be an integer);
+        return $self->_return_on_error($err_string);
     }
     
-    unless($options{length}
-       && $options{length} =~ /^[1-9][0-9]*$/
-       ) {
-        die qq(Invalid length "$options{length}". Must be an integer);
+    ## validate length
+    unless($self->_is_integer($options{length})) {
+        my $err_string = qq(Invalid length "$options{length}". Must be an integer);
+        return $self->_return_on_error($err_string);
     }
     
-    unless($options{memory}
-       && $options{memory} =~ /^[1-9][0-9]*$/
-       ) {
-        die qq(Invalid memory "$options{memory}". Must be an integer);
+    ## validate memory
+    unless($self->_is_integer($options{memory})) {
+        my $err_string = qq(Invalid memory "$options{memory}". Must be an integer);
+        return $self->_return_on_error($err_string);
     }
     
     my $parallelism = 1;
@@ -91,28 +116,34 @@ sub create_argon2_password_hash {
     
     my $hash = '';
     
+    ## create and validate hash
     if ($options{type} eq 'argon2id') {
         $hash = Crypt::Argon2::argon2id_pass(@cmdparams);
         unless(Crypt::Argon2::argon2id_verify($hash, $options{password})) {
-            die 'failed to verify created hash';
+            return $self->_return_on_error('failed to verify created hash');
         }
     } elsif($options{type} eq 'argon2i') {
         $hash = Crypt::Argon2::argon2i_pass(@cmdparams);
         unless(Crypt::Argon2::argon2i_verify($hash, $options{password})) {
-            die 'failed to verify created hash';
+            return $self->_return_on_error('failed to verify created hash');
         }
     } elsif($options{type} eq 'argon2d') {
         $hash = Crypt::Argon2::argon2d_pass(@cmdparams);
         unless(Crypt::Argon2::argon2d_verify($hash, $options{password})) {
-            die 'failed to verify created hash';
+            return $self->_return_on_error('failed to verify created hash');
         }
     }
     
-    return $hash;
+    if ( $hash ) {
+        return $hash;
+    } else {
+        return $self->_return_on_error('unexpected error creating hash');
+    }
 }
 
 sub create_pbkdf2_password_hash {
     my($self, %options) = @_;
+    $self->_set_errorstring('');
     $options{password} ||= '';
     $options{length} ||= 256;
     $options{iterations} ||= 600000;
@@ -126,32 +157,36 @@ sub create_pbkdf2_password_hash {
         'SHA512' => { number => 5, class => 'HMACSHA2', size => 512 },
     };
     
+    ## validate password
     unless($options{password}) {
-        die 'you must provide a password';
+        return $self->_return_on_error('you must provide a password');
     }
     
+    ## validate function
     unless(exists($funcmap->{$options{function}})) {
         my @allowedoptions = ( sort keys %$funcmap );
-        my $msg = qq('$options{function}' is not a valid function. Valid functions are ) . join(', ', @allowedoptions);
-        die $msg;
+        my $err_string = qq('$options{function}' is not a valid function. Valid functions are ) . join(', ', @allowedoptions);
+        return $self->_return_on_error($err_string);
     }
     
-    unless($options{length}
-       && $options{length} =~ /^[1-9][0-9]*$/
-       ) {
-        die qq(Invalid length "$options{length}". Must be an integer);
+    ## validate length
+    unless($self->_is_integer($options{length})) {
+        my $err_string = qq(Invalid length "$options{length}". Must be an integer);
+        return $self->_return_on_error($err_string);
     }
     
     if ( $options{length} % 8 ) {
-        die qq(A length of '$options{length}' bits cannot be encoded as bytes. Use a multiple of 8 ( 128, 256, 384, 512 etc) );
+        my $err_string = qq(A length of '$options{length}' bits cannot be encoded as bytes. Use a multiple of 8 ( 128, 224, 256, 384, 512 etc));
+        return $self->_return_on_error($err_string);
     }
     
-    unless($options{iterations}
-       && $options{iterations} =~ /^[1-9][0-9]*$/
-       ) {
-        die qq(Invalid iterations "$options{iterations}". Must be an integer);
+    ## validate iterations
+    unless($self->_is_integer($options{iterations})) {
+        my $err_string = qq(Invalid iterations "$options{iterations}". Must be an integer);
+        return $self->_return_on_error($err_string);
     }
-        
+    
+    ## create hash
     my $salt = Crypt::URandom::urandom(128);
     
     my $base64salt = MIME::Base64::encode_base64($salt, '');
@@ -183,7 +218,7 @@ sub create_pbkdf2_password_hash {
         $mappedfunc->{number}, $keynum, $base64salt, $basehash
     );
     
-    ## and validate
+    ## validate hash
         
     my $generated;
     if ($mappedfunc->{class} eq 'HMACSHA1' ) {
@@ -193,11 +228,20 @@ sub create_pbkdf2_password_hash {
     }
     
     unless($hasher->validate($generated, $options{password})) {
-        die 'failed to verify created hash';
+        return $self->_return_on_error('failed to verify created hash');
     }
-        
-    return $hash;
     
+    if ( $hash ) {
+        return $hash;
+    } else {
+        return $self->_return_on_error('unexpected error creating hash');
+    }
+}
+
+sub _return_on_error {
+    my ($self, $errmsg) = @_;
+    $self->_set_errorstring($errmsg);
+    return '';
 }
 
 1;
@@ -214,7 +258,7 @@ OpenSearch::Client::Hash - A utility to create password hashes
 
 =head1 VERSION
 
-version 3.007010
+version 3.008
 
 =head1 SYNOPSYS
 
@@ -255,8 +299,17 @@ version 3.007010
 
 Allows creation of C<BCrypt>, C<Argon2> and C<PBKDF2> password hashes that can be stored for later use in user creation.
 
-These are the same types of hash produced by C<plugins/opensearch-security/tools/hash.sh -p E<lt>new-passwordE<gt>>.
+These are the same types of hash produced by C<plugins/opensearch-security/tools/hash.sh>.
 
+C<BCrypt> is the default password hashing algorithm in all versions of C<OpenSearch>
+
+C<PBKDF2> password hashes and the ability to configure password hash settings in C<opensearch.yml> are supported
+from C<OpenSearch 2.16.0>
+
+C<Argon2> password hashes are supported from C<OpenSearch 3.2.0>
+
+NOTE : You cannot retrieve a cluster's password hashing settings using the REST API.
+You must be able to access C<opensearch.yml> on a node. 
 
 =head1 METHODS
 
@@ -266,16 +319,27 @@ Create a C<BCrypt> password hash from a plain text password.
 
 B<You cannot use hashes produced by this method> if your C<plugins.security.password.hashing.algorithm> is not the default C<BCrypt>
 
+Returns the hashed password. On error an empty string is returned and $ph->errorstring is populated.
+
     use OpenSearch::Client::Hash;
     my $ph = OpenSearch::Client::Hash->new;
     
     my $hash1 = $ph->create_bcrypt_password_hash( password => 'my plaintext password' );
+    
+    if( $ph->errorstring ) {
+        ......
+    }
     
     my $hash2 = $ph->create_bcrypt_password_hash(
         password => 'my other plaintext password',
         type     => '2y',
         rounds   => 12
     );
+    
+    unless( $hash2 ) {
+        my $error = $ph->errorstring;
+        .....
+    }
 
 
 =over
@@ -284,7 +348,7 @@ B<You cannot use hashes produced by this method> if your C<plugins.security.pass
 
 Required. The plaintext password to hash.
 
-Note that in C<BCrypt> passwords may only contain 72 characters and may not contain any null-byte.
+In C<BCrypt> passwords are limted to a maximum of 72 characters and may not contain any null-byte.
 
 =item C<type>
 
@@ -322,10 +386,16 @@ your C<plugins.security.password.hashing.argon2.version> is the default C<19>
 
 =back
 
+Returns the hashed password. On error an empty string is returned and $ph->errorstring is populated.
+
     use OpenSearch::Client::Hash;
     my $ph = OpenSearch::Client::Hash->new;
     
     my $hash1 = $ph->create_argon2_password_hash( password => 'my plaintext password' );
+    
+    if( $ph->errorstring ) {
+        ......
+    }
     
     my $hash2 = $ph->create_argon2_password_hash(
         password   => 'my other plaintext password',
@@ -334,6 +404,11 @@ your C<plugins.security.password.hashing.argon2.version> is the default C<19>
         iterations => 3,
         memory     => 65536,
     );
+    
+    unless( $hash2 ) {
+        my $error = $ph->errorstring;
+        .....
+    }
 
 =over
 
@@ -373,10 +448,16 @@ Create a C<PBKDF2> password hash from a plain text password.
 
 B<You cannot use hashes produced by this method> unless your C<plugins.security.password.hashing.algorithm> is C<PBKDF2>
 
+Returns the hashed password. On error an empty string is returned and $ph->errorstring is populated.
+
     use OpenSearch::Client::Hash;
     my $ph = OpenSearch::Client::Hash->new;
     
     my $hash1 = $ph->create_pbkdf2_password_hash( password => 'my plaintext password' );
+    
+    if( $ph->errorstring ) {
+        ......
+    }
     
     my $hash2 = $ph->create_pbkdf2_password_hash(
         password   => 'my other plaintext password',
@@ -384,6 +465,11 @@ B<You cannot use hashes produced by this method> unless your C<plugins.security.
         length     => 256,
         iterations => 600000,
     );
+    
+    unless( $hash2 ) {
+        my $error = $ph->errorstring;
+        .....
+    }
 
 =over
 
@@ -411,13 +497,13 @@ B<Do not set this option> unless your C<plugins.security.password.hashing.pbkdf2
 
 =back
 
-=head1 MANUAL
+=head1 SEE ALSO
 
-Documentation index L<OpenSearch::Client::Manual>
+L<OpenSearch::Client> an unoffical client for OpenSearch
 
 =head1 AUTHOR
 
-Mark Dootson E<lt>mdootson@cpan.orgE<gt> ( current maintainer )
+Mark Dootson E<lt>mdootson@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
