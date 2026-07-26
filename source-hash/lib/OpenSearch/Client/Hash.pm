@@ -1,5 +1,5 @@
 package OpenSearch::Client::Hash;
-$OpenSearch::Client::Hash::VERSION = '3.008';
+$OpenSearch::Client::Hash::VERSION = '3.009';
 use Moo;
 use MIME::Base64 ();
 use Crypt::URandom;
@@ -210,12 +210,17 @@ sub create_pbkdf2_password_hash {
     my $hasher = Crypt::PBKDF2->new(%hasherparams);
     
     my $basehash = $hasher->PBKDF2_base64($salt, $options{password});
-    
-    my $keynum = $options{iterations} << 32;
-    $keynum |= $options{length}; 
-    
+        
+    my $keyprefix = '';
+    ## 32 bit perl with 32 bit int needs bigint
+    {
+        use bigint;
+        my $prefix_bigint = ( $options{iterations} * (2 ** 32) ) + $options{length};
+        $keyprefix .= $prefix_bigint;
+    }
+        
     my $hash = sprintf('$%s$%s$%s$%s',
-        $mappedfunc->{number}, $keynum, $base64salt, $basehash
+        $mappedfunc->{number}, $keyprefix, $base64salt, $basehash
     );
     
     ## validate hash
@@ -258,7 +263,7 @@ OpenSearch::Client::Hash - A utility to create password hashes
 
 =head1 VERSION
 
-version 3.008
+version 3.009
 
 =head1 SYNOPSYS
 
