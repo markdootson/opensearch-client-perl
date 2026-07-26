@@ -8,7 +8,7 @@ for my $testplan (
     
     { params => { password => 'my password' },
      expecterror => '',
-     hashlength  => 237, name => 'good password' },
+     hashlength  => 237, name => 'good password', hashcomp => '$3$2576980377600256$' },
     
     { params => { password => '' },
      expecterror => 'you must provide a password',
@@ -34,16 +34,19 @@ for my $testplan (
     
     { params => { password => 'my password', length => 512, function => 'SHA1', iterations => '1000'  },
      expecterror => '',
-     hashlength  => 278, name => 'L 512 F SHA1 I 1000' },
+     hashlength  => 278, name => 'L 512 F SHA1 I 1000', hashcomp => '$1$4294967296512$' },
         
     { params => { password => 'my password', length => 128, function => 'SHA512', iterations => '1000'  },
      expecterror => '',
-     hashlength  => 214, name => 'L 128 F SHA512 I 1000' },
+     hashlength  => 214, name => 'L 128 F SHA512 I 1000', hashcomp => '$5$4294967296128$' },
     
 ) {
     my $thash = $h->create_pbkdf2_password_hash(%{ $testplan->{params} });
     is( $h->errorstring, $testplan->{expecterror}, $testplan->{name} . ' error string' );
     is( length($thash), $testplan->{hashlength}, $testplan->{name} . ' hash length');
+    if ( $testplan->{hashcomp} ) {
+        is(substr($thash, 0, length($testplan->{hashcomp})), $testplan->{hashcomp}, $testplan->{name} . ' hash compare' );
+    }
 }
 
 done_testing;

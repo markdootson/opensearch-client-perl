@@ -1,5 +1,8 @@
 Revision history for OpenSearch::Client::Hash
 
+3.009       2026-07-26
+            * Fix for 32 bit Perls using 32 bit ints
+
 3.008       2026-07-24
             * Capture parameter errors
             * Documentation updates
