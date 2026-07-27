@@ -1,26 +1,5 @@
-# OpenSearch::Client is an unofficial client for OpenSearch. 
-# It is derived from Search::Elasticsearch version 7.714
-# License details from that work are contained in the NOTICE
-# file distributed with this work.
-#-----------------------------------------------------------------------
-# OpenSearch::Client
-#-----------------------------------------------------------------------
-# Copyright 2026 Mark Dootson
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-package OpenSearch::Client::Transport;
-$OpenSearch::Client::Transport::VERSION = '3.007010';
+package OpenSearch::Client::Transport::TryCatch;
+$OpenSearch::Client::Transport::TryCatch::VERSION = '3.007010';
 use Moo;
 
 use URI();
@@ -69,12 +48,15 @@ sub perform_request {
         }
 
         $logger->trace_error( $cxn, $error );
-        $error->is('NoNodes')
-            ? $logger->throw_critical($error)
-            : $logger->throw_error($error);
+        $response = undef;
     }
-
-    return $response;
+    
+    if (wantarray) {
+        return( $response, $error );
+    } else {
+        return ( $response ) ? $response : $error;
+    }
+    
 }
 
 1;
@@ -87,7 +69,7 @@ __END__
 
 =head1 NAME
 
-OpenSearch::Client::Transport - Provides interface between the client class and the OpenSearch cluster
+OpenSearch::Client::Transport::TryCatch - Provides interface between the client class and the OpenSearch cluster
 
 =head1 VERSION
 
@@ -95,19 +77,47 @@ version 3.007010
 
 =head1 DESCRIPTION
 
-The Transport class manages the request cycle. It receives parsed requests
+This Transport class manages the request cycle. It receives parsed requests
 from the (user-facing) client class, and tries to execute the request on a
 node in the cluster, retrying a request if necessary.
 
+It returns any errors in response to the request.
+
 This class does L<OpenSearch::Client::Role::Transport> and
-L<OpenSearch::Client::Role::Is_Sync>.
+L<OpenSearch::Client::Role::Is_Sync>
+
+Specify it as the transport when creating a client instance.
+
+    my $os = OpenSearch::Client->new(
+        transport => 'TryCatch',
+        ....
+    );
+
+Errors are captured and returned.
+
+    my ($response, $error) = $os->call_some_method(%params);
+    if( $error ) {
+        # $error is an L<OpenSearch::Client::Error> object
+        if( $error->is('NoNodes') ) {
+            # this error is unrecoverable
+            .....
+        }
+        .....
+    }
+           
+    my $response_or_error = $os->call_some_method(%params);
+    
+    if($response_or_error->isa('OpenSearch::Client::Error')) {
+        .....
+    }
 
 =head1 CONFIGURATION
 
 =head2 C<send_body_as_source>
 
     $os = OpenSearch::Client->new(
-        send_body_as_source => 1
+        transport => 'TryCatch',
+        send_body_as_source => 1,
     );
 
 The body is encoded as JSON and added to the query string as the C<source>
